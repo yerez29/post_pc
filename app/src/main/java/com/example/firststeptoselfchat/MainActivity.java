@@ -8,7 +8,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
-
+    public static final String EMPTY_STRING = "";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -20,7 +20,7 @@ public class MainActivity extends AppCompatActivity {
                 EditText inputText = findViewById(R.id.editText);
                 TextView outputText = findViewById(R.id.outputText);
                 String outputStr = inputText.getText().toString();
-                inputText.setText("");
+                inputText.setText(EMPTY_STRING);
                 outputText.setText(outputStr);
             }
         });
