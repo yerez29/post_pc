@@ -6,17 +6,19 @@ public class Message {
     private String msgContent;
     private String timeStamp;
     private String msgKey;
+    private String deviceModel;
 
     public Message()
     {
 
     }
 
-    public Message(String content, String time, String key)
+    public Message(String content, String time, String key, String model)
     {
         msgContent = content;
         timeStamp = time;
         msgKey = key;
+        deviceModel = model;
     }
 
     public String getMsgContent() {
@@ -29,5 +31,9 @@ public class Message {
 
     public String getMsgKey() {
         return msgKey;
+    }
+
+    public String getDeviceModel() {
+        return deviceModel;
     }
 }

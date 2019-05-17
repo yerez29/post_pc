@@ -1,10 +1,13 @@
 package com.example.firststeptoselfchat;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -16,6 +19,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -58,7 +62,8 @@ public class MainActivity extends AppCompatActivity implements MyRecyclerViewAda
     final Gson gson = new Gson();
     SharedPreferences sp;
     SharedPreferences.Editor editor;
-
+    private String user_name = EMPTY_STRING;
+    private String deleted_msg_position = EMPTY_STRING;
     private class fireStoreBGthread extends AsyncTask<Void, Void, Void>
     {
         @Override
@@ -93,6 +98,16 @@ public class MainActivity extends AppCompatActivity implements MyRecyclerViewAda
         this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        TextView user_text = findViewById(R.id.userTxt);
+        user_name = getIntent().getStringExtra("USER_NAME");
+        if (user_name != null && !user_name.equals(EMPTY_STRING))
+        {
+            user_text.setText("hello " + user_name + "!");
+        }
+        else
+        {
+            user_text.setText(EMPTY_STRING);
+        }
         Button sendBtn = findViewById(R.id.button);
         Context context = getApplicationContext();
         CharSequence text = ERROR_MSG;
@@ -132,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements MyRecyclerViewAda
         adapter = new MyRecyclerViewAdapter(this, messages);
         adapter.setClickListener(this);
         recyclerView.setAdapter(adapter);
-        new fireStoreBGthread().execute(); // can add params for a constructor if needed
+        new fireStoreBGthread().execute();
         DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(recyclerView.getContext(),
                 manager.getOrientation());
         recyclerView.addItemDecoration(dividerItemDecoration);
@@ -158,7 +173,7 @@ public class MainActivity extends AppCompatActivity implements MyRecyclerViewAda
                     keyMap.put(COUNTER_VALUE, String.valueOf(msgCounter));
                     docRef.set(keyMap);
                     timeStamp = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss").format(new Date());
-                    Message newMessage = new Message(outputStr, timeStamp, String.valueOf(msgCounter));
+                    Message newMessage = new Message(outputStr, timeStamp, String.valueOf(msgCounter), Build.DEVICE);
                     collectionRef.document(String.valueOf(msgCounter)).set(newMessage);
                     arrayList.add(newMessage);
                 }
@@ -172,32 +187,13 @@ public class MainActivity extends AppCompatActivity implements MyRecyclerViewAda
         {
             return;
         }
-        DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                switch (which){
-                    case DialogInterface.BUTTON_POSITIVE:
-                        messages.remove(position);
-                        adapter.notifyItemRemoved(position);
-                        lstLength -= 1;
-                        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                        final SharedPreferences.Editor editor = sp.edit();
-                        editor.putInt(LENGTH_OF_LIST, lstLength);
-                        String wjson = gson.toJson(messages);
-                        editor.putString(LIST_OF_MESSAGES, wjson);
-                        editor.apply();
-                        collectionRef.document(arrayList.get(position).getMsgKey()).delete();
-                        arrayList.remove(position);
-                        break;
-
-                    case DialogInterface.BUTTON_NEGATIVE:
-                        break;
-                }
-            }
-        };
-        AlertDialog.Builder builder = new AlertDialog.Builder(view.getContext());
-        builder.setMessage("Are you sure?").setPositiveButton("Yes", dialogClickListener)
-                .setNegativeButton("No", dialogClickListener).show();
+        Intent intent = new Intent(getBaseContext(), MessageActivity.class);
+        intent.putExtra("CURRENT_USER_NAME", user_name);
+        intent.putExtra("POSITION", String.valueOf(position));
+        intent.putExtra("CONTENT", arrayList.get(position).getMsgContent());
+        intent.putExtra("TIME_STAMP", arrayList.get(position).getTimeStamp());
+        intent.putExtra("DEVICE_MODEL", arrayList.get(position).getDeviceModel());
+        startActivityForResult(intent, 1);
     }
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
@@ -209,5 +205,29 @@ public class MainActivity extends AppCompatActivity implements MyRecyclerViewAda
     public void onRestoreInstanceState(Bundle savedInstanceState) {
 
         super.onRestoreInstanceState(savedInstanceState);
+    }
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
+            super.onActivityResult(requestCode, resultCode, data);
+            if (requestCode == 1  && resultCode  == RESULT_OK) {
+
+                deleted_msg_position = data.getStringExtra("POSITION");
+                if (deleted_msg_position != null && !deleted_msg_position.equals(EMPTY_STRING))
+                {
+                    Log.v("DELETE", deleted_msg_position);
+                    int position = Integer.parseInt(deleted_msg_position);
+                    messages.remove(position);
+                    adapter.notifyItemRemoved(position);
+                    lstLength -= 1;
+                    SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                    final SharedPreferences.Editor editor = sp.edit();
+                    editor.putInt(LENGTH_OF_LIST, lstLength);
+                    String wjson = gson.toJson(messages);
+                    editor.putString(LIST_OF_MESSAGES, wjson);
+                    editor.apply();
+                    collectionRef.document(arrayList.get(position).getMsgKey()).delete();
+                    arrayList.remove(position);
+                }
+            }
     }
 }
